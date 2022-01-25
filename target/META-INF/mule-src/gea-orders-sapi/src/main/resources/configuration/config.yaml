@@ -1,0 +1,16 @@
+sfdc:
+  userid: "iyerosky@gea.com"
+  password: "Mulesoftdemo@2021"
+  token: "yxKwKoqIZvb1Cu6sAriCz01i"
+  
+ebs:
+  host: "ebs.demos.mulesoft.com" 
+  port: "8000" 
+  username: "OPERATIONS" 
+  password: "MuleDemo21!" 
+  restServiceLocatorAlias: "ebsRestService" 
+  fndWebSecAlias: "fnd_web_sec" 
+  responsibility: "ORDER_MGMT_SUPER_USER" 
+  respApplication: "ONT" 
+  securityGroup: "STANDARD" 
+  orgId: "204"  

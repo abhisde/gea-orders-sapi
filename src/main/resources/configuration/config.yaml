@@ -1,0 +1,16 @@
+sfdc:
+  userid: ""
+  password: ""
+  token: ""
+  
+ebs:
+  host: "" 
+  port: "" 
+  username: "" 
+  password: "" 
+  restServiceLocatorAlias: "" 
+  fndWebSecAlias: "" 
+  responsibility: "" 
+  respApplication: "" 
+  securityGroup: "" 
+  orgId: ""  

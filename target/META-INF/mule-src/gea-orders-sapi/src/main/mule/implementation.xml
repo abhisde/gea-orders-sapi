@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:oraclehcmcloud="http://www.mulesoft.org/schema/mule/oraclehcmcloud" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:oracle-ebs122="http://www.mulesoft.org/schema/mule/oracle-ebs122" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/oracle-ebs122 http://www.mulesoft.org/schema/mule/oracle-ebs122/current/mule-oracle-ebs122.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/oraclehcmcloud http://www.mulesoft.org/schema/mule/oraclehcmcloud/current/mule-oraclehcmcloud.xsd">
+	<oracle-ebs122:config name="Oracle_EBS_12_2_Config" doc:name="Oracle EBS 12.2 Config" doc:id="72235f30-93f1-4af2-85bf-13d22be8e025" >
+		<oracle-ebs122:plsql-connection host="ebs.demos.mulesoft.com" port="8000" username="OPERATIONS" password="MuleDemo21!" restServiceLocatorAlias="ebsRestService" fndWebSecAlias="fnd_web_sec" responsibility="ORDER_MGMT_SUPER_USER" respApplication="ONT" securityGroup="STANDARD" orgId="204" />
+	</oracle-ebs122:config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="2b355570-b88e-417f-a6e6-33d231ca3005" >
+		<salesforce:basic-connection username="iyerosky@gea.com" password="Mulesoftdemo@2021" securityToken="yxKwKoqIZvb1Cu6sAriCz01i" />
+	</salesforce:sfdc-config>
+	<flow name="ebsgetorder" doc:id="fb8f080f-0553-4cb9-985d-9b32951bb6b6" >
+		<ee:transform doc:name="Create GET-ORDER Request" doc:id="d1d3c084-1585-454c-becf-d84184d73f12">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://xmlns.oracle.com/apps/ont/rest/salesOrdersServices/get_order/
+---
+{
+	ns0#InputParameters: {
+		ns0#P_API_VERSION_NUMBER: "1.0",
+		ns0#P_INIT_MSG_LIST: "T",
+		ns0#P_RETURN_VALUES: "T",
+		ns0#P_ORDER_NUMBER: attributes.uriParams.'order_ID' as Number
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<oracle-ebs122:invoke-pl-sql-rest-service doc:name="EBS GET ORDER" doc:id="404065d2-b3e5-4143-87c5-6125531c5b51" config-ref="Oracle_EBS_Config_gea" operation="GET_ORDER" plSql="salesOrdersServices"/>
+		<logger level="INFO" doc:name="Logger" doc:id="1cffae5e-7dfd-4f4f-a0a2-ff8f120a6904" message="#[payload]"/>
+		<ee:transform doc:name="Get Order Response JSON" doc:id="8f7d4f7f-52fd-4456-97e2-78f2f1d16207" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://xmlns.oracle.com/apps/ont/rest/salesOrdersServices/get_order/
+---
+{
+	EBS_Integration_Method: "EBS 12.2 Connector",
+	OrderNumber: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#ORDER_NUMBER,
+	booked: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#BOOKED_FLAG,
+	transactionalCurrCode: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#TRANSACTIONAL_CURR_CODE,
+	orderTypeId: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#ORDER_TYPE_ID,
+	priceListId: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#PRICE_LIST_ID,
+	soldToOrgId: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#SOLD_TO_ORG_ID,
+	customerPO: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#CUST_PO_NUMBER,
+	description: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#ATTRIBUTE1,
+	orderStatus: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#FLOW_STATUS_CODE,
+	orderItems: payload.ns0#OutputParameters.ns0#X_LINE_TBL.*ns0#X_LINE_TBL_ITEM map ( xLINETBLITEM , indexOfXLINETBLITEM ) -> {
+		inventoryItemId: xLINETBLITEM.ns0#INVENTORY_ITEM_ID default 0,
+		lineTypeId: xLINETBLITEM.ns0#LINE_TYPE_ID default 0,
+		paymentTermId: xLINETBLITEM.ns0#PAYMENT_TERM_ID default 0,
+		unitSellingPrice: xLINETBLITEM.ns0#UNIT_SELLING_PRICE default 0,
+		orderedQuantity: xLINETBLITEM.ns0#ORDERED_QUANTITY default 0,
+		unitListPrice: xLINETBLITEM.ns0#UNIT_LIST_PRICE default 0,
+		priceListId: xLINETBLITEM.ns0#PRICE_LIST_ID default 0,
+		shipFromOrgID: xLINETBLITEM.ns0#SHIP_FROM_ORG_ID default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="ebscreateorder" doc:id="a8e8b87e-7d4e-46b3-a992-0839ac14b110" >
+		<ee:transform doc:name="Create Order Request" doc:id="08ab2f5c-19df-4ac6-b188-479d9521d98d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://xmlns.oracle.com/apps/ont/rest/salesOrdersServices/process_order/
+---
+{
+	ns0#InputParameters: {
+		ns0#P_API_VERSION_NUMBER: "1.0",
+		ns0#P_INIT_MSG_LIST: "T",
+		ns0#P_RETURN_VALUES: "T",
+		ns0#P_ACTION_COMMIT: "T",
+		ns0#P_HEADER_REC: {
+			ns0#ATTRIBUTE1: payload.description,
+			ns0#BOOKED_FLAG: payload.booked,
+			ns0#CUST_PO_NUMBER: payload.customerPO,
+			ns0#ORDER_TYPE_ID: payload.orderTypeId,
+			ns0#ORG_ID: payload.orgId,
+			ns0#PAYMENT_TERM_ID: payload.paymentTermId,
+			ns0#PRICE_LIST_ID: payload.priceListId,
+			ns0#SOLD_TO_ORG_ID: payload.soldToOrgId,
+			ns0#TRANSACTIONAL_CURR_CODE: payload.transactionalCurrCode,
+			ns0#OPERATION: "CREATE"
+		},
+		ns0#P_LINE_TBL: {
+			(payload.orderItems map ( orderItem , indexOfOrderItem ) -> {
+				ns0#P_LINE_TBL_ITEM: {
+					ns0#INVENTORY_ITEM_ID: orderItem.inventoryItemId,
+					ns0#LINE_TYPE_ID: orderItem.lineTypeId,
+					ns0#ORDERED_QUANTITY: orderItem.orderedQuantity,
+					ns0#PAYMENT_TERM_ID: orderItem.paymentTermId,
+					ns0#PRICE_LIST_ID: orderItem.priceListId,
+					ns0#UNIT_LIST_PRICE: orderItem.unitListPrice,
+					ns0#UNIT_SELLING_PRICE: orderItem.unitSellingPrice,
+					ns0#OPERATION: "CREATE"
+				}
+			})
+		},
+		ns0#P_RTRIM_DATA: "n"
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<oracle-ebs122:invoke-pl-sql-rest-service plSql="salesOrdersServices" operation="PROCESS_ORDER" doc:name="EBS CREATE ORDER" doc:id="b0868126-8e53-4d38-a01b-c1f72fb5f419" config-ref="Oracle_EBS_Config_gea"/>
+		<ee:transform doc:name="Process Order Response Json" doc:id="ede8946f-0173-4e7b-9202-2051bd7706a3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://xmlns.oracle.com/apps/ont/rest/salesOrdersServices/process_order/
+---
+{
+	ReturnStatus: payload.ns0#OutputParameters.ns0#X_RETURN_STATUS default "",
+	EBS_Header_ID: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#HEADER_ID as String default "",
+	Order_Number: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#ORDER_NUMBER as String default "",
+	customerPO: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#CUST_PO_NUMBER,
+	orderStatus: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#FLOW_STATUS_CODE,
+	Messages: payload.ns0#OutputParameters.ns0#X_MESSAGES.*ns0#X_MESSAGES_ITEM map ( xMESSAGESITEM , indexOfXMESSAGESITEM ) -> {
+		messageText: xMESSAGESITEM.ns0#MESSAGE_TEXT default ""
+	},
+	PO_Number: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#CUST_PO_NUMBER default "",
+	Invoice_To: {
+		Org: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_ORG default "",
+		Address: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_ADDRESS1 default "",
+		City: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_CITY default "",
+		State: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_STATE default "",
+		Zip: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_ZIP default "",
+		Country: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_COUNTRY default ""
+	},
+	Ship_To: {
+		Customer: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_ORG default "",
+		Address: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_ADDRESS1 default "",
+		City: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_CITY default "",
+		State: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_STATE default "",
+		Zip: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_ZIP default "",
+		Country: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_COUNTRY default ""
+	},
+	Items: payload.ns0#OutputParameters.ns0#X_LINE_TBL.*ns0#P_LINE_TBL_ITEM map ( pLINETBLITEM , indexOfPLINETBLITEM ) -> {
+		Description: pLINETBLITEM.ns0#ORDERED_ITEM default "",
+		OrderedQuantity: pLINETBLITEM.ns0#ORDERED_QUANTITY default 0,
+		UnitListPrice: pLINETBLITEM.ns0#UNIT_LIST_PRICE default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="ebsupdateorder" doc:id="af4f64e1-1b41-4684-a61d-e3ea73739d59" >
+		<ee:transform doc:name="Update Order Request" doc:id="943fff73-b835-4cb1-a56a-2a2af904d6e6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://xmlns.oracle.com/apps/ont/rest/salesOrdersServices/process_order/
+---
+{
+	ns0#InputParameters: {
+		ns0#P_API_VERSION_NUMBER: "1.0",
+		ns0#P_INIT_MSG_LIST: "T",
+		ns0#P_RETURN_VALUES: "T",
+		ns0#P_ACTION_COMMIT: "T",
+		ns0#P_HEADER_REC: {
+			ns0#HEADER_ID: attributes.uriParams.'order_ID' as String,
+			ns0#ORDER_NUMBER: payload.orderNumber,
+			ns0#ATTRIBUTE1: payload.description,
+			ns0#BOOKED_FLAG: payload.booked,
+			ns0#ORDER_TYPE_ID: payload.orderTypeId,
+			//ns0#ORG_ID: payload.orgId,
+			ns0#PAYMENT_TERM_ID: payload.paymentTermId,
+			ns0#PRICE_LIST_ID: payload.priceListId,
+			//ns0#SOLD_TO_ORG_ID: payload.soldToOrgId,
+			ns0#TRANSACTIONAL_CURR_CODE: payload.transactionalCurrCode,
+			ns0#PRICING_DATE: now() as Date{format: "dd-mmm-yy"},
+			ns0#OPERATION: "UPDATE"
+		},
+		ns0#P_LINE_TBL: {
+			(payload.orderItems map ( orderItem , indexOfOrderItem ) -> {
+				ns0#P_LINE_TBL_ITEM: {
+					ns0#HEADER_ID: attributes.uriParams.'order_ID' as String,
+					ns0#LINE_ID: orderItem.lineId,
+					ns0#INVENTORY_ITEM_ID: orderItem.inventoryItemId,
+					ns0#LINE_TYPE_ID: orderItem.lineTypeId,
+					ns0#ORDERED_ITEM_ID: orderItem.inventoryItemId,
+					//ns0#ORDERED_QUANTITY: orderItem.orderedQuantity,
+					ns0#PAYMENT_TERM_ID: orderItem.paymentTermId,
+					//ns0#PRICE_LIST_ID: orderItem.priceListId,
+					//ns0#UNIT_LIST_PRICE: orderItem.unitListPrice,
+					//ns0#UNIT_SELLING_PRICE: orderItem.unitSellingPrice,
+					ns0#OPERATION: "UPDATE"
+				}
+			})
+		},
+		ns0#P_RTRIM_DATA: "n"
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<oracle-ebs122:invoke-pl-sql-rest-service plSql="salesOrdersServices" operation="PROCESS_ORDER" doc:name="EBS UPDATE ORDER" doc:id="360aa6c5-7091-4600-a90f-3c75e5abfc06" config-ref="Oracle_EBS_Config_gea" />
+		<ee:transform doc:name="Process Order Response Json" doc:id="e04f95ab-9b15-47d9-8c51-5fd61002d2ba" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+ns ns0 http://xmlns.oracle.com/apps/ont/rest/salesOrdersServices/process_order/
+---
+{
+	ReturnStatus: payload.ns0#OutputParameters.ns0#X_RETURN_STATUS default "",
+	EBS_Header_ID: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#HEADER_ID as String default "",
+	Order_Number: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#ORDER_NUMBER as String default "",
+	Messages: payload.ns0#OutputParameters.ns0#X_MESSAGES.*ns0#X_MESSAGES_ITEM map ( xMESSAGESITEM , indexOfXMESSAGESITEM ) -> {
+		messageText: xMESSAGESITEM.ns0#MESSAGE_TEXT default ""
+	},
+	PO_Number: payload.ns0#OutputParameters.ns0#X_HEADER_REC.ns0#CUST_PO_NUMBER default "",
+	Invoice_To: {
+		Org: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_ORG default "",
+		Address: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_ADDRESS1 default "",
+		City: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_CITY default "",
+		State: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_STATE default "",
+		Zip: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_ZIP default "",
+		Country: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#INVOICE_TO_COUNTRY default ""
+	},
+	Ship_To: {
+		Customer: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_ORG default "",
+		Address: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_ADDRESS1 default "",
+		City: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_CITY default "",
+		State: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_STATE default "",
+		Zip: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_ZIP default "",
+		Country: payload.ns0#OutputParameters.ns0#X_HEADER_VAL_REC.ns0#SHIP_TO_COUNTRY default ""
+	},
+	Items: payload.ns0#OutputParameters.ns0#X_LINE_TBL.*ns0#P_LINE_TBL_ITEM map ( pLINETBLITEM , indexOfPLINETBLITEM ) -> {
+		Description: pLINETBLITEM.ns0#ORDERED_ITEM default "",
+		OrderedQuantity: pLINETBLITEM.ns0#ORDERED_QUANTITY default 0,
+		UnitListPrice: pLINETBLITEM.ns0#UNIT_LIST_PRICE default 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

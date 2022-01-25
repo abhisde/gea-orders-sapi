@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:oracle-ebs122="http://www.mulesoft.org/schema/mule/oracle-ebs122"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/oracle-ebs122 http://www.mulesoft.org/schema/mule/oracle-ebs122/current/mule-oracle-ebs122.xsd">
+	<http:listener-config name="HTTP_Listener_config_poc" doc:name="HTTP Listener config" doc:id="3ddce602-4caf-410d-9495-4aeef8ee7d5b" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration_poc" doc:name="HTTP Request configuration" doc:id="256ab5d9-8fcc-4f78-ba45-79de52864776" />
+	<salesforce:sfdc-config name="Salesforce_Config_gea" doc:name="Salesforce Config" doc:id="f1e4079a-95e3-4078-8fa4-4ff951089838" >
+		<salesforce:basic-connection username="${sfdc.userid}" password="${sfdc.password}" securityToken="${sfdc.token}" />
+	</salesforce:sfdc-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="999ce981-5e65-4121-900e-79cbdf7518d0" file="configuration/config.yaml" />
+	<oracle-ebs122:config name="Oracle_EBS_Config_gea" doc:name="Oracle EBS 12.2 Config" doc:id="f42e0dc3-2a54-4940-9ba0-4241a6a59c21" >
+		<oracle-ebs122:plsql-connection host="${ebs.host}" port="${ebs.port}" username="${ebs.username}" password="${ebs.password}" restServiceLocatorAlias="${ebs.restServiceLocatorAlias}" fndWebSecAlias="${ebs.fndWebSecAlias}" responsibility="${ebs.responsibility}" respApplication="${ebs.respApplication}" securityGroup="${ebs.securityGroup}" orgId="${ebs.orgId}" />
+	</oracle-ebs122:config>
+
+</mule>
